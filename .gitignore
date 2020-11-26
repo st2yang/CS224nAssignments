@@ -1,3 +1,13 @@
+.idea/
+.DS_Store
+
+# data
+assignment3/data/
+assignment4/en_es_data/
+assignment4/sanity_check_en_es_data/
+assignment5/en_es_data/
+assignment5/sanity_check_en_es_data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
