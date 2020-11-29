@@ -32,6 +32,9 @@ class PartialParse(object):
         ### Note: The root token should be represented with the string "ROOT"
         ###
 
+        self.stack = ['ROOT']
+        self.buffer = self.sentence.copy()
+        self.dependencies = []
 
         ### END YOUR CODE
 
@@ -51,6 +54,21 @@ class PartialParse(object):
         ###         2. Left Arc
         ###         3. Right Arc
 
+        if transition == 'S':
+            word = self.buffer.pop(0)
+            self.stack.append(word)
+        elif transition == 'LA':
+            first_word = self.stack[-1]
+            second_word = self.stack[-2]
+            self.stack.pop(-2)
+            self.dependencies.append((first_word, second_word))
+        elif transition == 'RA':
+            first_word = self.stack[-1]
+            second_word = self.stack[-2]
+            self.stack.pop(-1)
+            self.dependencies.append((second_word, first_word))
+        else:
+            raise ValueError("Undefined transition")
 
         ### END YOUR CODE
 
@@ -102,6 +120,23 @@ def minibatch_parse(sentences, model, batch_size):
     ###             to remove objects from the `unfinished_parses` list. This will free the underlying memory that
     ###             is being accessed by `partial_parses` and may cause your code to crash.
 
+    partial_parses = [PartialParse(s) for s in sentences]
+
+    def pp_done(pp):
+        return len(pp.buffer) == 0 and len(pp.stack) == 1
+
+    def filter_done_pp(pps):
+        return list(filter(lambda pp: not pp_done(pp), pps))
+
+    unfinished_parses = filter_done_pp(partial_parses[:])
+    while unfinished_parses:
+        batch_parses = unfinished_parses[:batch_size] if batch_size <= len(unfinished_parses) else unfinished_parses
+        batch_trans = model.predict(batch_parses)
+        for pp, t in zip(batch_parses, batch_trans):
+            pp.parse_step(t)
+        unfinished_parses = filter_done_pp(unfinished_parses)
+
+    dependencies = [pp.dependencies for pp in partial_parses]
 
     ### END YOUR CODE
 
