@@ -65,6 +65,13 @@ def pad_sents(sents, pad_token):
 
     ### COPY OVER YOUR CODE FROM ASSIGNMENT 4
 
+    sents_padded = sents.copy()
+    sents_lens = [len(sent) for sent in sents]
+    max_len = max(sents_lens)
+    for i in range(len(sents)):
+        if sents_lens[i] < max_len:
+            sents_padded[i].extend([pad_token] * (max_len-sents_lens[i]))
+
     ### END YOUR CODE FROM ASSIGNMENT 4
 
     return sents_padded

@@ -40,6 +40,14 @@ class ModelEmbeddings(nn.Module):
 
         ### YOUR CODE HERE for part 1h
 
+        self.word_embed_size = word_embed_size
+        char_embed_size = 50
+        self.char_embedding = nn.Embedding(len(vocab.char2id), char_embed_size)
+        self.cnn = CNN(char_embed_size, word_embed_size)
+        self.relu = nn.ReLU()
+        self.highway = Highway(word_embed_size)
+        self.dropout = nn.Dropout(0.3)
+
         ### END YOUR CODE
 
     def forward(self, input):
@@ -52,6 +60,18 @@ class ModelEmbeddings(nn.Module):
             CNN-based embeddings for each word of the sentences in the batch
         """
         ### YOUR CODE HERE for part 1h
+
+        sentence_length, batch_size, max_word_length = input.shape
+        X_padded = input.view(-1, max_word_length)
+        X_embed = self.char_embedding(X_padded)
+        X_reshaped = X_embed.transpose(1, 2)
+        X_conv = self.cnn(X_reshaped)
+        X_convout = nn.functional.max_pool1d(X_conv, kernel_size=X_conv.shape[2]).squeeze(2)
+        X_highway = self.highway(X_convout)
+        X_word_emb = self.dropout(X_highway)
+        output = X_word_emb.view(sentence_length, batch_size, -1)
+
+        return output
 
         ### END YOUR CODE
 

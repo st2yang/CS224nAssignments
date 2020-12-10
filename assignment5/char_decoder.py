@@ -36,6 +36,12 @@ class CharDecoder(nn.Module):
         ### YOUR CODE HERE for part 2a
         ### TODO - Implement the forward pass of the character decoder.
 
+        char_embed = self.decoderCharEmb(input)
+        output, dec_hidden = self.charDecoder(char_embed, dec_hidden)
+        scores = self.char_output_projection(output)
+
+        return scores, dec_hidden
+
         ### END YOUR CODE
 
     def train_forward(self, char_sequence, dec_hidden=None):
@@ -53,6 +59,15 @@ class CharDecoder(nn.Module):
         ###       - char_sequence corresponds to the sequence x_1 ... x_{n+1} (e.g., <START>,m,u,s,i,c,<END>). Read the handout about how to construct input and target sequence of CharDecoderLSTM.
         ###       - Carefully read the documentation for nn.CrossEntropyLoss and our handout to see what this criterion have already included:
         ###             https://pytorch.org/docs/stable/nn.html#crossentropyloss
+
+        X_src = char_sequence[:-1, :]
+        X_tgt = char_sequence[1:, :]
+        scores, _ = self.forward(X_src, dec_hidden)
+        scores = scores.permute(1, 2, 0)
+        target = torch.t(X_tgt)
+        loss = nn.functional.cross_entropy(scores, target, reduction='sum', ignore_index=self.target_vocab.char2id['∏'])
+
+        return loss
 
         ### END YOUR CODE
 
@@ -76,5 +91,29 @@ class CharDecoder(nn.Module):
         ###      - We use curly brackets as start-of-word and end-of-word characters. That is, use the character '{' for <START> and '}' for <END>.
         ###        Their indices are self.target_vocab.start_of_word and self.target_vocab.end_of_word, respectively.
 
+        start_idx = self.target_vocab.start_of_word
+        end_idx = self.target_vocab.end_of_word
+        batch_size = initialStates[0].shape[1]
+        current_char = torch.tensor([[start_idx] * batch_size], dtype=torch.long, device=device)
+
+        outputWords = []
+        decodedWords = []
+        dec_hidden = initialStates
+
+        for _ in range(max_length):
+            scores, dec_hidden = self.forward(current_char, dec_hidden)
+            current_char = scores.argmax(-1)
+            outputWords += [current_char]
+
+        outputWords = torch.cat(outputWords).t().tolist()
+        for w in outputWords:
+            word = ""
+            for c in w:
+                if c == end_idx:
+                    break
+                word += self.target_vocab.id2char[c]
+            decodedWords += [word]
+
+        return decodedWords
         ### END YOUR CODE
 
